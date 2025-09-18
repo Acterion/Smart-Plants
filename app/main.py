@@ -13,11 +13,13 @@ import sqlite3
 from sqlalchemy.orm import Session
 
 api = FastAPI()
-API_KEY = "vKpsikScqRUt2CdC"
+# Get API_KEY from environment variable or use default as fallback
+API_KEY = os.environ.get("API_KEY", "vKpsikScqRUt2CdC")
 
 # Create tables if they don't exist
 init_db()
-DATABASE_PATH = "plants.db"
+# Get database file path from environment variable or use default
+DATABASE_PATH = os.environ.get("DATABASE_PATH", "database/plants.db")
 
 
 @api.post("/plants/measurements")
@@ -73,7 +75,7 @@ async def receive_watering(request: Request):
 
 @api.get("/plants/database")
 async def download_database(request: Request):
-    if request.headers.get("x-api-key") != "vKpsikScqRUt2CdC":
+    if request.headers.get("x-api-key") != API_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     if os.path.exists(DATABASE_PATH):
@@ -91,7 +93,7 @@ async def get_recent_data_csv(
     minutes: int = Query(5, ge=1, le=1440),
     api_key: str = Header(..., alias="x-api-key")
 ):
-    if api_key != "vKpsikScqRUt2CdC":
+    if api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     cutoff = datetime.now() - timedelta(minutes=minutes)
@@ -126,3 +128,8 @@ async def test_endpoint(request: Request):
     if request.headers.get("x-api-key") != API_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")
     return {"message": "API is working!", "value": 42}
+
+
+@api.get("/")
+async def hello():
+    return {"message": "Welcome to the Smart Plants API"}

@@ -5,10 +5,20 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    environment:
+      - API_KEY=${API_KEY:-vKpsikScqRUt2CdC}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///plants.db}
+      - DATABASE_PATH=${DATABASE_PATH:-plants.db}
     volumes:
-      # - ./app/plants.db:/app/plants.db # Mount the database file
-      - db_data:/app/data # Additional volume for any other persistent data
+      - db_data:/app/database # Mount the named volume to persist database data
     restart: unless-stopped
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./app
+          target: /app
+          ignore:
+            - "*.db"
 
 volumes:
   db_data: # Named volume for persistent data
