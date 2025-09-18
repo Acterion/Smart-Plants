@@ -1,0 +1,15 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      # - ./app/plants.db:/app/plants.db # Mount the database file
+      - db_data:/app/data # Additional volume for any other persistent data
+    restart: unless-stopped
+
+volumes:
+  db_data: # Named volume for persistent data
+    driver: local

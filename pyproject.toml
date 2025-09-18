@@ -1,0 +1,10 @@
+[project]
+name = "smart-plants"
+version = "0.1.0"
+description = "Lightweight FastAPI application for managing plant measurements."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = ["fastapi", "uvicorn", "sqlalchemy"]
+
+[tool.setuptools]
+packages = ["app"]
