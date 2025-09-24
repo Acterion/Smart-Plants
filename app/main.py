@@ -1,8 +1,8 @@
 #!/usr/bin/env python3.13
 from fastapi import FastAPI, Request, HTTPException, Query, Header, Depends
 from fastapi.responses import FileResponse, StreamingResponse
-from models import SensorValue, PumpEvent
-from database import SessionLocal, init_db
+from app.models import SensorValue, PumpEvent
+from app.database import get_db, init_db
 from datetime import datetime, timedelta
 from typing import List
 import os
@@ -14,12 +14,15 @@ from sqlalchemy.orm import Session
 
 api = FastAPI()
 # Get API_KEY from environment variable or use default as fallback
-API_KEY = os.environ.get("API_KEY", "vKpsikScqRUt2CdC")
+API_KEY = os.environ.get("API_KEY")
 
 # Create tables if they don't exist
 init_db()
 # Get database file path from environment variable or use default
-DATABASE_PATH = os.environ.get("DATABASE_PATH", "database/plants.db")
+
+
+async def not_implemented():
+    return {"message": "This endpoint is not yet implemented or deprecated."}
 
 
 @api.post("/plants/measurements")
@@ -33,7 +36,7 @@ async def receive_sensor_data(request: Request):
     sensors = data.get("sensors", {})
     timestamp = datetime.now()
 
-    session = SessionLocal()
+    session = get_db()
 
     for sensor_type, entry in sensors.items():
         sensor = SensorValue(
@@ -63,7 +66,7 @@ async def receive_watering(request: Request):
     device_uuid = data.get("device_uuid")
     timestamp = datetime.now()
 
-    session = SessionLocal()
+    session = get_db()
     event = PumpEvent(name=name, device_uuid=device_uuid, timestamp=timestamp)
     session.add(event)
     session.commit()
@@ -73,19 +76,21 @@ async def receive_watering(request: Request):
     return {"status": "ok"}
 
 
-@api.get("/plants/database")
-async def download_database(request: Request):
-    if request.headers.get("x-api-key") != API_KEY:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+# @api.get("/plants/database")
+# async def download_database(request: Request):
+#     not_implemented()
+    # DATABASE_PATH = os.environ.get("DATABASE_PATH", "database/plants.db")
+    # if request.headers.get("x-api-key") != API_KEY:
+    #     raise HTTPException(status_code=401, detail="Unauthorized")
 
-    if os.path.exists(DATABASE_PATH):
-        return FileResponse(
-            path=DATABASE_PATH,
-            media_type="application/octet-stream",
-            filename="plants.db"
-        )
+    # if os.path.exists(DATABASE_PATH):
+    #     return FileResponse(
+    #         path=DATABASE_PATH,
+    #         media_type="application/octet-stream",
+    #         filename="plants.db"
+    #     )
 
-    raise HTTPException(status_code=404, detail="Database not found")
+    # raise HTTPException(status_code=404, detail="Database not found")
 
 
 @api.get("/plants/recent")
@@ -99,20 +104,28 @@ async def get_recent_data_csv(
     cutoff = datetime.now() - timedelta(minutes=minutes)
 
     try:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute("SELECT id, name, device_uuid, sensor_type, value, unit, timestamp FROM sensor_values "
-                  "WHERE timestamp >= ? ORDER BY timestamp DESC", (cutoff,))
-        rows = c.fetchall()
-        conn.close()
+        session = get_db()
+        try:
+            # Query sensor values using SQLAlchemy ORM
+            sensor_values = session.query(SensorValue).filter(
+                SensorValue.timestamp >= cutoff
+            ).order_by(SensorValue.timestamp.desc()).all()
 
-        # Create CSV in memory
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["id", "name", "device_uuid",
-                        "sensor_type", "value", "unit", "timestamp"])
-        writer.writerows(rows)
-        output.seek(0)
+            # Create CSV in memory
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["id", "name", "device_uuid",
+                             "sensor_type", "value", "unit", "timestamp"])
+
+            for sensor in sensor_values:
+                writer.writerow([
+                    sensor.id, sensor.name, sensor.device_uuid,
+                    sensor.sensor_type, sensor.value, sensor.unit, sensor.timestamp
+                ])
+
+            output.seek(0)
+        finally:
+            session.close()
 
         return StreamingResponse(
             output,
@@ -130,6 +143,6 @@ async def test_endpoint(request: Request):
     return {"message": "API is working!", "value": 42}
 
 
-@api.get("/")
+@api.get("/plants")
 async def hello():
     return {"message": "Welcome to the Smart Plants API"}

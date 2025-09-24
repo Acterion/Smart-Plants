@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Lightweight FastAPI application for managing plant measurements."
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = ["fastapi", "uvicorn", "sqlalchemy"]
+dependencies = ["fastapi", "uvicorn", "sqlalchemy", "psycopg2-binary"]
 
 [tool.setuptools]
 packages = ["app"]

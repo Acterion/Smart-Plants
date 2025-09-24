@@ -1,0 +1,62 @@
+# :80 :443 :8010 {
+#     encode zstd gzip
+#     log
+
+#    @plantsRoot {
+#     host plants.makeruniverse.de
+#     path /
+#   }
+#   handle @plantsRoot {
+#     # internal rewrite; browser URL stays "/"
+#     rewrite * /public-dashboards/18a3a1fc685c4b76b49158164eb5c1d7
+#     reverse_proxy 172.22.0.200:8001 {
+#         header_up Host {host} # redundant
+#         header_up X-Real-IP {remote}
+#         header_up X-Forwarded-For {remote}  # redundant
+#         header_up X-Forwarded-Port {server_port} # redundant
+#         header_up X-Forwarded-Proto {scheme}
+#     }
+#   }
+
+#   # @plantsOther host plants.makeruniverse.de
+#   # handle @plantsOther {
+#   #   reverse_proxy 172.22.0.200:8001 {
+#   #       header_up Host {host} # redundant
+#   #       header_up X-Real-IP {remote}
+#   #       header_up X-Forwarded-For {remote}  # redundant
+#   #       header_up X-Forwarded-Port {server_port} # redundant
+#   #       header_up X-Forwarded-Proto {scheme}
+#   #   }
+#   # }
+
+#   respond 404
+# }
+
+:80 :443 :8010 {
+  encode zstd gzip
+  log
+
+  # Optional: send "/" to your shared dashboard with a browser redirect
+  @plantsRoot {
+    host plants.makeruniverse.de
+    path /
+  }
+  handle @plantsRoot {
+    redir https://plants.makeruniverse.de/public-dashboards/18a3a1fc685c4b76b49158164eb5c1d7 301
+    respond "Welcome to the Plants Dashboard. </br>
+    Go to https://plants.makeruniverse.de/public-dashboards/18a3a1fc685c4b76b49158164eb5c1d7 to see the dashboard." 200
+  }
+
+  @plantsOther host plants.makeruniverse.de
+  handle @plantsOther {
+    reverse_proxy 172.22.0.200:8001 {
+    # These three are the important ones
+    header_up Host {host}
+    header_up X-Forwarded-Host {host}
+    header_up X-Forwarded-Proto {scheme}
+    # Caddy handles websockets automatically, nothing else needed.
+    }
+  }
+
+  respond 404
+}

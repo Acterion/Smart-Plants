@@ -1,5 +1,6 @@
 services:
   api:
+    container_name: smart-plants-api
     build:
       context: .
       dockerfile: Dockerfile
@@ -7,10 +8,11 @@ services:
       - "8000:8000"
     environment:
       - API_KEY=${API_KEY:-vKpsikScqRUt2CdC}
-      - DATABASE_URL=${DATABASE_URL:-sqlite:///plants.db}
-      - DATABASE_PATH=${DATABASE_PATH:-plants.db}
-    volumes:
-      - db_data:/app/database # Mount the named volume to persist database data
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
     restart: unless-stopped
     develop:
       watch:
@@ -20,6 +22,59 @@ services:
           ignore:
             - "*.db"
 
+  db:
+    container_name: smart-plants-db
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql/data # Use the same named volume for PostgreSQL data
+    ports:
+      - "8002:5432"
+    restart: unless-stopped
+
+  caddy:
+    container_name: smart-plants-caddy
+    build:
+      context: .
+      dockerfile: caddy.Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8010:8010"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+  adminer:
+    container_name: smart-plants-adminer
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+
+  grafana:
+    image: grafana/grafana-oss:main
+    container_name: grafana
+    environment:
+      - GF_SERVER_ROOT_URL=https://plants.makeruniverse.de/
+      - GF_SERVER_DOMAIN=plants.makeruniverse.de
+      - GF_LOG_LEVEL=error
+    ports:
+      - "8001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    restart: unless-stopped
+
 volumes:
-  db_data: # Named volume for persistent data
+  pg_data:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local
+  grafana_data:
     driver: local
