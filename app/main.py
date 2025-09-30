@@ -130,7 +130,7 @@ async def hello():
     return {"message": "Welcome to the Smart Plants API"}
 
 
-@api.get("/dashboard")
+@api.get("/dash")
 async def dashboard():
     # return static html page from index.html
     with open("index.html") as f:
