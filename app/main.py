@@ -1,6 +1,6 @@
 #!/usr/bin/env python3.13
 from fastapi import FastAPI, Request, HTTPException, Query, Header, Depends
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from app.models import SensorValue, PumpEvent
 from app.database import get_db, init_db
 from datetime import datetime, timedelta
@@ -8,7 +8,6 @@ from typing import List
 import os
 import csv
 import io
-import sqlite3
 
 from sqlalchemy.orm import Session
 
@@ -76,23 +75,6 @@ async def receive_watering(request: Request):
     return {"status": "ok"}
 
 
-# @api.get("/plants/database")
-# async def download_database(request: Request):
-#     not_implemented()
-    # DATABASE_PATH = os.environ.get("DATABASE_PATH", "database/plants.db")
-    # if request.headers.get("x-api-key") != API_KEY:
-    #     raise HTTPException(status_code=401, detail="Unauthorized")
-
-    # if os.path.exists(DATABASE_PATH):
-    #     return FileResponse(
-    #         path=DATABASE_PATH,
-    #         media_type="application/octet-stream",
-    #         filename="plants.db"
-    #     )
-
-    # raise HTTPException(status_code=404, detail="Database not found")
-
-
 @api.get("/plants/recent")
 async def get_recent_data_csv(
     minutes: int = Query(5, ge=1, le=1440),
@@ -146,3 +128,13 @@ async def test_endpoint(request: Request):
 @api.get("/plants")
 async def hello():
     return {"message": "Welcome to the Smart Plants API"}
+
+
+@api.get("/dashboard")
+async def dashboard():
+    # return static html page from index.html
+    with open("index.html") as f:
+        html_content = f.read()
+    if not html_content:
+        return {"message": "Error loading dashboard"}
+    return HTMLResponse(content=html_content)
