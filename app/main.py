@@ -125,16 +125,17 @@ async def test_endpoint(request: Request):
     return {"message": "API is working!", "value": 42}
 
 
+# @api.get("/plants")
+# async def hello():
+#     return {"message": "Welcome to the Smart Plants API"}
+
+
 @api.get("/plants")
-async def hello():
-    return {"message": "Welcome to the Smart Plants API"}
-
-
-@api.get("/dash")
 async def dashboard():
     # return static html page from index.html
-    with open("index.html") as f:
-        html_content = f.read()
-    if not html_content:
-        return {"message": "Error loading dashboard"}
+    try:
+        with open("index.html") as f:
+            html_content = f.read()
+    except Exception as e:
+        return {"message": "Error loading dashboard: " + str(e)}
     return HTMLResponse(content=html_content)
